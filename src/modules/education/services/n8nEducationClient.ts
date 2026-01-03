@@ -49,5 +49,8 @@ export async function generateExam(
 }
 
 
-function endpoint(kind: EducationDocKind): string { return ${N8N_BASE}/webhook/donia/education/; }
+function endpoint(kind: EducationDocKind): string {
+  return `${N8N_BASE}/webhook/donia/education/${kind}`;
+}/webhook/donia/education/; }
+
 
