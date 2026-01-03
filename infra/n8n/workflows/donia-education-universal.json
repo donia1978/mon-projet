@@ -1,0 +1,88 @@
+﻿{
+  "name": "DONIA Education Universal (Webhook -> LLM -> JSON)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "donia/education/exam",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook Exam",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [300, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $json.body || $json;\\nconst required = ['cycle','level','subject'];\\nfor (const k of required) { if (!body[k]) throw new Error('Missing: ' + k); }\\nreturn [{ json: body }];"
+      },
+      "name": "Validate",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [520, 240]
+    },
+    {
+      "parameters": {
+        "functionCode": "const b = $json;\\n// Build prompt server-side OR call your frontend prompt builder later.\\nconst cycle = b.cycle;\\nconst level = b.level;\\nconst subject = b.subject;\\nconst unit = b.unit || '';\\nconst lang = b.language || 'fr';\\nconst total = b.totalPoints ?? 20;\\nconst duration = b.durationMin ?? (cycle === 'primaire' ? 60 : cycle === 'college' ? 90 : 120);\\nconst prompt = `Génère une épreuve tunisienne. Sortie JSON strict. Barème=${total}, durée=${duration}. Niveau=${cycle}/${level}. Matière=${subject}. Unité=${unit}. Langue=${lang}.`;\nreturn [{ json: { ...b, prompt } }];"
+      },
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 2,
+      "position": [740, 240]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "messages": [
+          {
+            "role": "system",
+            "content": "You output STRICT JSON only."
+          },
+          {
+            "role": "user",
+            "content": "={{$json.prompt}}"
+          }
+        ]
+      },
+      "name": "LLM",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 4,
+      "position": [960, 240]
+    }
+  ],
+  "connections": {
+    "Webhook Exam": {
+      "main": [
+        [
+          {
+            "node": "Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
